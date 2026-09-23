@@ -13,3 +13,16 @@ An intelligent, retrieval-augmented generation (RAG) knowledge assistant designe
    ```bash
    git clone [https://github.com/Asad-Hussain/agentic-rag-knowledge-assistant.git](https://github.com/Asad-Hussain/agentic-rag-knowledge-assistant.git)
    cd agentic-rag-knowledge-assistant
+Install dependencies:
+
+Bash
+pip install langchain faiss-cpu sentence-transformers python-dotenv
+Configure your environment variables:
+
+Code snippet
+OPENAI_API_KEY=your_openai_api_key_here
+Usage
+Execute the Jupyter notebook or run the core Python script to build the vector store and start querying your data:
+
+Bash
+python app.py
