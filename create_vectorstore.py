@@ -1,26 +1,28 @@
 # AtomBot
 
-AtomBot is now upgraded to a LangGraph-based agent workflow with retrieval-augmented generation (RAG).
+AtomBot now uses a multi-agent LangGraph workflow with tool calling for two sources of knowledge:
 
-## What changed
+- local PDF retrieval from the uploaded knowledge base
+- web search for current or external information
+
+## Features
 
 - PDF ingestion with `pypdf`
-- Text chunking with `langchain-text-splitters`
-- Embeddings with `langchain-huggingface`
-- FAISS-based document retrieval
-- LLM orchestration via `langchain-groq`
-- Agent orchestration with `langgraph`
-- Streamlit chat interface
+- chunking with `langchain-text-splitters`
+- semantic retrieval with FAISS
+- embedding generation with `langchain-huggingface`
+- LLM orchestration with `langchain-groq`
+- multi-agent routing via `langgraph`
+- tool calling with local document search and web search
+- Streamlit chat UI
 
 ## Architecture
 
-The app now uses a simple LangGraph workflow:
+The app now routes each question through a planner:
 
-1. Receive the user question
-2. Retrieve relevant chunks from the vector store
-3. Build a grounded context prompt
-4. Send the prompt + conversation history to Groq
-5. Return the answer and supporting sources
+- question is document-focused -> use local document search
+- question needs current or external context -> use web search
+- both results are passed to the final answer agent
 
 ## Setup
 
@@ -37,13 +39,13 @@ source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-3. Create a `.env` file with your Groq key:
+3. Create a `.env` file:
 
 ```bash
 cp .env.example .env
 ```
 
-4. Add your settings, for example:
+4. Add your Groq key and model configuration:
 
 ```env
 GROQ_API_KEY=your_key_here
@@ -51,7 +53,7 @@ LLM_MODEL=openai/gpt-oss-20b
 EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
 ```
 
-## Create the vector store
+## Build the vector store
 
 ```bash
 python create_vectorstore.py --pdf data/feature_engineering.pdf --output faiss_index
@@ -63,19 +65,4 @@ python create_vectorstore.py --pdf data/feature_engineering.pdf --output faiss_i
 streamlit run app.py
 ```
 
-## Project structure
-
-```text
-.
-├── app.py
-├── create_vectorstore.py
-├── rag.py
-├── requirements.txt
-├── .env.example
-├── .gitignore
-├── data/
-├── faiss_index/
-└── README.md
-```
-
-This is now a proper LangGraph agent flow rather than a simple linear RAG script.
+This version adds real tool-calling behavior for both document retrieval and web search.

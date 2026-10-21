@@ -8,5 +8,6 @@ langchain-groq
 langchain-text-splitters
 langchain-huggingface
 langgraph
+duckduckgo-search
 faiss-cpu
 sentence-transformers

@@ -1,16 +1,16 @@
 import streamlit as st
 
-from rag import create_langgraph_agent
+from rag import create_multi_agent_workflow
 
 st.set_page_config(page_title="AtomBot", page_icon="🤖", layout="centered")
 
 st.title("AtomBot")
-st.caption("LangGraph Research & Knowledge Assistant")
+st.caption("Multi-Agent LangGraph Assistant")
 
 
 @st.cache_resource
 def load_agent():
-    return create_langgraph_agent()
+    return create_multi_agent_workflow()
 
 
 agent = load_agent()
@@ -22,7 +22,7 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.write(message["content"])
 
-question = st.chat_input("Ask a question about the document...")
+question = st.chat_input("Ask a question about the document or current information...")
 
 if question:
     st.session_state.messages.append({"role": "user", "content": question})
@@ -41,8 +41,9 @@ if question:
                     {
                         "question": question,
                         "history": history,
-                        "context": "",
-                        "documents": [],
+                        "local_context": "",
+                        "web_context": "",
+                        "answer": "",
                     }
                 )
             except FileNotFoundError as exc:
@@ -50,15 +51,18 @@ if question:
                 st.stop()
 
         answer = result.get("answer", "I could not generate an answer.")
-        documents = result.get("documents", [])
         st.write(answer)
 
         with st.expander("View Sources"):
-            for i, document in enumerate(documents, start=1):
-                page = document.metadata.get("page", "Unknown")
-                if isinstance(page, int):
-                    page += 1
-                st.markdown(f"**Source {i} | Page {page}**")
-                st.write(document.page_content)
+            source_parts = []
+            if result.get("local_context"):
+                source_parts.append("Local document context:\n" + result["local_context"])
+            if result.get("web_context"):
+                source_parts.append("Web search context:\n" + result["web_context"])
+
+            if not source_parts:
+                st.write("No supporting sources were used.")
+            else:
+                st.write("\n\n".join(source_parts))
 
     st.session_state.messages.append({"role": "assistant", "content": answer})
