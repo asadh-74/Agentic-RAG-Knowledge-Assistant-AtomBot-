@@ -1,108 +1,81 @@
-from __future__ import annotations
+# AtomBot
 
-import os
-from pathlib import Path
+AtomBot is now upgraded to a LangGraph-based agent workflow with retrieval-augmented generation (RAG).
 
-from dotenv import load_dotenv
-from langchain_community.document_loaders import PyPDFLoader
-from langchain_community.vectorstores import FAISS
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_groq import ChatGroq
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+## What changed
 
-load_dotenv()
+- PDF ingestion with `pypdf`
+- Text chunking with `langchain-text-splitters`
+- Embeddings with `langchain-huggingface`
+- FAISS-based document retrieval
+- LLM orchestration via `langchain-groq`
+- Agent orchestration with `langgraph`
+- Streamlit chat interface
 
-DATA_DIR = Path("data")
-VECTORSTORE_PATH = Path("faiss_index")
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
-LLM_MODEL = os.getenv("LLM_MODEL", "openai/gpt-oss-20b")
+## Architecture
 
+The app now uses a simple LangGraph workflow:
 
-def ensure_pdf_exists(pdf_path: str | Path) -> Path:
-    pdf_file = Path(pdf_path)
-    if not pdf_file.exists():
-        raise FileNotFoundError(
-            f"PDF file not found: {pdf_file}. Add your PDF under the data/ folder first."
-        )
-    return pdf_file
+1. Receive the user question
+2. Retrieve relevant chunks from the vector store
+3. Build a grounded context prompt
+4. Send the prompt + conversation history to Groq
+5. Return the answer and supporting sources
 
+## Setup
 
-def build_vectorstore(pdf_path: str | Path, persist_path: str | Path = VECTORSTORE_PATH) -> FAISS:
-    pdf_file = ensure_pdf_exists(pdf_path)
+1. Create a virtual environment:
 
-    loader = PyPDFLoader(str(pdf_file))
-    documents = loader.load()
-    if not documents:
-        raise ValueError(f"No pages were extracted from {pdf_file}.")
+```bash
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+```
 
-    splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
-    chunks = splitter.split_documents(documents)
+2. Install dependencies:
 
-    embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
-    vectorstore = FAISS.from_documents(chunks, embeddings)
-    vectorstore.save_local(str(persist_path))
-    return vectorstore
+```bash
+pip install -r requirements.txt
+```
 
+3. Create a `.env` file with your Groq key:
 
-def load_vectorstore() -> FAISS:
-    if not VECTORSTORE_PATH.exists():
-        raise FileNotFoundError(
-            "No FAISS vector store found. Run create_vectorstore.py before using the app."
-        )
+```bash
+cp .env.example .env
+```
 
-    embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
-    return FAISS.load_local(
-        str(VECTORSTORE_PATH),
-        embeddings,
-        allow_dangerous_deserialization=True,
-    )
+4. Add your settings, for example:
 
+```env
+GROQ_API_KEY=your_key_here
+LLM_MODEL=openai/gpt-oss-20b
+EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+```
 
-def create_rag_chain():
-    vectorstore = load_vectorstore()
-    retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
+## Create the vector store
 
-    llm = ChatGroq(model=LLM_MODEL, temperature=0)
-    prompt = ChatPromptTemplate.from_template(
-        """
-        You are AtomBot, a helpful assistant.
+```bash
+python create_vectorstore.py --pdf data/feature_engineering.pdf --output faiss_index
+```
 
-        Use the retrieved document context and conversation history to answer the user's question.
-        If the answer is not in the retrieved context, say:
-        "I could not find this information in the document."
+## Run the app
 
-        Do not invent information.
+```bash
+streamlit run app.py
+```
 
-        Conversation history:
-        {history}
+## Project structure
 
-        Document context:
-        {context}
+```text
+.
+├── app.py
+├── create_vectorstore.py
+├── rag.py
+├── requirements.txt
+├── .env.example
+├── .gitignore
+├── data/
+├── faiss_index/
+└── README.md
+```
 
-        Current question:
-        {question}
-
-        Answer:
-        """
-    )
-
-    def ask(question: str, history: str = "") -> tuple[str, list]:
-        documents = retriever.invoke(question)
-        context = "\n\n".join(doc.page_content for doc in documents)
-
-        response = llm.invoke(
-            prompt.format(history=history, context=context, question=question)
-        )
-        return response.content, documents
-
-    return ask
-
-
-if __name__ == "__main__":
-    pdf_file = DATA_DIR / "feature_engineering.pdf"
-    if pdf_file.exists():
-        build_vectorstore(pdf_file)
-        print(f"Vector store built from {pdf_file}.")
-    else:
-        print("No PDF found in data/. Add a PDF and run create_vectorstore.py.")
+This is now a proper LangGraph agent flow rather than a simple linear RAG script.
