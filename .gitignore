@@ -1,0 +1,8 @@
+venv/
+.env
+__pycache__/
+*.py[cod]
+.DS_Store
+Thumbs.db
+.streamlit/secrets.toml
+faiss_index/

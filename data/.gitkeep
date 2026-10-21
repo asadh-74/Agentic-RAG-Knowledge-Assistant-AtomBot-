@@ -1,0 +1,91 @@
+# AtomBot
+
+AtomBot is a LangChain-powered knowledge assistant that can ingest a PDF, split it into chunks, embed the content with a vector store, and answer questions grounded in the document.
+
+## Features
+
+- PDF ingestion with `pypdf`
+- Text chunking with `langchain-text-splitters`
+- Vector search with FAISS
+- Embeddings with `langchain-huggingface`
+- LLM inference with Groq via `langchain-groq`
+- Streamlit chat interface for end-user querying
+
+## Prerequisites
+
+- Python 3.11+
+- A Groq API key
+
+## Setup
+
+1. Clone the repository.
+2. Create a virtual environment:
+
+```bash
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+```
+
+3. Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+4. Create a `.env` file from the example:
+
+```bash
+cp .env.example .env
+```
+
+5. Add your Groq key and optional model overrides in `.env`.
+
+## Add your PDF
+
+Place your document in the `data/` folder, for example:
+
+```text
+data/feature_engineering.pdf
+```
+
+## Build the vector store
+
+```bash
+python create_vectorstore.py --pdf data/feature_engineering.pdf --output faiss_index
+```
+
+## Run the app
+
+```bash
+streamlit run app.py
+```
+
+## Example workflow
+
+- Load PDF
+- Chunk document text
+- Generate embeddings
+- Store vectors in FAISS
+- Retrieve top relevant chunks for each user question
+- Send the retrieved context and conversation history to the LLM
+- Return grounded answers
+
+## Project structure
+
+```text
+.
+├── app.py
+├── create_vectorstore.py
+├── rag.py
+├── requirements.txt
+├── .env.example
+├── .gitignore
+├── data/
+├── faiss_index/
+└── README.md
+```
+
+## Notes
+
+The repository is now aligned with a modern LangChain stack. If you want, we can next upgrade it to use LangGraph, add a web UI, or connect it to a custom document store.
+

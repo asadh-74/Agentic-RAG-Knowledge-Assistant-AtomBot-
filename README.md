@@ -1,28 +1,55 @@
-Agentic RAG Knowledge Assistant
+import streamlit as st
 
-An intelligent, retrieval-augmented generation (RAG) knowledge assistant designed to process, query, and retrieve precise context from custom documentation. Powered by **LangChain**, **FAISS**, and planned for advanced state management via **LangGraph**.
+from rag import create_rag_chain
 
-## Features
-* **Semantic Document Retrieval:** Uses FAISS for high-speed vector similarity search over embedded knowledge bases.
-* **Context-Aware Responses:** Integrates retrieved chunks dynamically into LLM prompts to minimize hallucinations.
-* **Modular Pipeline:** Easily extendable for advanced multi-step reasoning workflows.
+st.set_page_config(page_title="AtomBot", page_icon="🤖", layout="centered")
 
-## Prerequisites & Installation
+st.title("AtomBot")
+st.caption("Agentic RAG Knowledge Assistant")
 
-1. Clone the repository:
-   ```bash
-   git clone [https://github.com/Asad-Hussain/agentic-rag-knowledge-assistant.git](https://github.com/Asad-Hussain/agentic-rag-knowledge-assistant.git)
-   cd agentic-rag-knowledge-assistant
-Install dependencies:
 
-Bash
-pip install langchain faiss-cpu sentence-transformers python-dotenv
-Configure your environment variables:
+@st.cache_resource
+def load_rag():
+    return create_rag_chain()
 
-Code snippet
-OPENAI_API_KEY=your_openai_api_key_here
-Usage
-Execute the Jupyter notebook or run the core Python script to build the vector store and start querying your data:
 
-Bash
-python app.py
+ask = load_rag()
+
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.write(message["content"])
+
+question = st.chat_input("Ask a question about the document...")
+
+if question:
+    st.session_state.messages.append({"role": "user", "content": question})
+
+    with st.chat_message("user"):
+        st.write(question)
+
+    history = ""
+    for message in st.session_state.messages[:-1]:
+        history += f'{message["role"].capitalize()}: {message["content"]}\n'
+
+    with st.chat_message("assistant"):
+        with st.spinner("Thinking..."):
+            try:
+                answer, documents = ask(question, history)
+            except FileNotFoundError as exc:
+                st.error(str(exc))
+                st.stop()
+
+        st.write(answer)
+
+        with st.expander("View Sources"):
+            for i, document in enumerate(documents, start=1):
+                page = document.metadata.get("page", "Unknown")
+                if isinstance(page, int):
+                    page += 1
+                st.markdown(f"**Source {i} | Page {page}**")
+                st.write(document.page_content)
+
+    st.session_state.messages.append({"role": "assistant", "content": answer})
